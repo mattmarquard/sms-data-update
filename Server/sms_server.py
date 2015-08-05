@@ -118,8 +118,11 @@ class TwilioHandler(BaseHTTPRequestHandler):
 	def _check_msg_integrity(self, msg_id, msg):
 		hasher = md5.new()
 		hasher.update(msg)
-		if hasher.hexdigest() == self.ongoing_messages[msg_id]['hash']:
-			return True
+		if 'hash' in self.ongoing_messages[msg_id]:
+			if hasher.hexdigest() == self.ongoing_messages[msg_id]['hash']:
+				return True
+			else:
+				return False
 		else:
 			return False
 
