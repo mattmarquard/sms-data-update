@@ -1,74 +1,72 @@
-// INPUT:
-// string = string of entire message to be processed on server
-// OUTPUT:
-// list of message partitioned so it can be sent over SMS
-function partitionMessage(string) {
-    var msgLength = string.length;
-    var messageComponents = [];
+/**
+ * SMS Communication Protocol for Data Updates
+ * @author Matthew MacLennan matt@thevertigo.com
+ * @requires {@link https://code.google.com/p/crypto-js/#MD5}
+ */
+
+/**
+ * Partitions 'data update' command into SMS compatible sizes
+ * (< 144 characters).
+ * @param {string} command - command to be executed on remote server
+ * @returns {string[]} bodies - command partitioned into strings to be
+ * 				sent via sms
+ */
+function partitionMessage(command) {
+    var cmdLength = command.length;
+    var cmdComponents = [];
     // if size fits into one sms
-    if (msgLength <= 80) {
-	messageComponents.push(string);
+    if (cmdLength <= 80) {
+	cmdComponents.push(command);
     } 
     // message has to be split amongst multiple SMS
     else {
-	lastMessage = string.slice(-113); // message in header with hash
-	var newLength = msgLength - 113;
-	var endIndex = -113;               //first char in regular header/message
+	lastComponent = command.slice(-113); // message in header with hash
+	var newLength = cmdLength - 113;
+	var endIndex = -113; //first char in regular header/message
 	var beginIndex = -114 - 144;
-	var messageComponent;
+	var cmdComponent;
 	while (newLength > 0) {
-	    messageComponent = string.slice(beginIndex, endIndex);
-	    console.log("MESSAGE LENGTH");
-	    console.log(messageComponent.length);
-	    messageComponents.unshift(messageComponent);
+	    cmdComponent = command.slice(beginIndex, endIndex);
+	    cmdComponents.unshift(cmdComponent);
 	    newLength = newLength - 144;
 	    endIndex = beginIndex;
 	    beginIndex = endIndex - 144;
 	}
-	console.log("MESSAGE LENGTH");
-	console.log(lastMessage.length);
-	messageComponents.push(lastMessage);
+	cmdComponents.push(lastComponent);
     }
-    console.log("Message components after partition");
-    console.log(messageComponents);
-    return messageComponents;
+    return cmdComponents;
 }
 
-// INPUT:
-// models = list of backbone models to be altered
-// actions = actions to take for models provided to method
-// OUTPUT: a list of messages to be sent via SMS
+/**
+ * Create's an array of SMS messages that encode the data update
+ * to be sent to a receiving server.
+ *
+ * @param {object[]} models - array of models to be updated on server
+ * @param {Number[]} actions - array of actions to take on models.
+ * @returns {string[]} array of strings to be sent via SMS
+ */
 function prepareSms(models, actions) {
 
-    var preString = {}
+    var preString = {};
+    // stringify each object/model
     for (i = 0; i < actions.length; i++) {
 	if (preString.hasOwnProperty(actions[i])) {
-	    preString[actions[i]].push(models[i].toJSON());
+	    preString[actions[i]].push(JSON.stringify(models[i], null, 0));
 	}
 	else {
 	    preString[actions[i]] = []
-	    preString[actions[i]].push(models[i].toJSON());
+	    preString[actions[i]].push(JSON.stringify(models[i], null, 0));
 	}
     }
-    var headAndBody = {
-	'header': {},
-	'body': {}
-    }
-
-    var finalString = '';
-    var finalHeader = {};
-    var header = {};
     var finalMessages = [];
     
     // models and actions stringfied
     var string = JSON.stringify(preString);
-    console.log('STRING');
-    console.log(string);
     var hash = CryptoJS.MD5(string);
     var hashString = hash.toString(CryptoJS.enc.Hex);
     // cutting up message
-    var messageComponents = partitionMessage(string);
-    var numMessages = messageComponents.length;
+    var cmdComponents = partitionMessage(string);
+    var numMessages = cmdComponents.length;
     var seq;
     var seqString;
     var tseq;
@@ -91,23 +89,17 @@ function prepareSms(models, actions) {
 	    seqString = ("00" + seq).substr(-2,2);
 	    seqAndTotal = seqString.concat(tseqString);
 	    seqAndHash = seqAndTotal.concat(hashString);
-	    fullMessage = seqAndHash.concat(messageComponents[i]);
-	    console.log('length with header');
-	    console.log(fullMessage.length);
+	    fullMessage = seqAndHash.concat(cmdComponents[i]);
 	    finalMessages.push(fullMessage);
 	}
 	else {
 	    seq = i;
 	    seqString = ("00" + seq).substr(-2,2);
 	    seqAndTotal = seqString.concat(tseqString);
-	    fullMessage = seqAndTotal.concat(messageComponents[i]);
-	    console.log('length with header');
-	    console.log(fullMessage.length);
+	    fullMessage = seqAndTotal.concat(cmdComponents[i]);
 	    finalMessages.push(fullMessage);
 	}
     }
 
-    console.log("list of messages before returning out of SMSmodule");
-    console.log(finalMessages);
     return finalMessages;
 }
