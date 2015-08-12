@@ -12,6 +12,9 @@
  * 				sent via sms
  */
 function partitionMessage(command) {
+    console.log('prepartition');
+    console.log(command.length);
+    console.log(command);
     var cmdLength = command.length;
     var cmdComponents = [];
     // if size fits into one sms
@@ -51,17 +54,19 @@ function prepareSms(models, actions) {
     // stringify each object/model
     for (i = 0; i < actions.length; i++) {
 	if (preString.hasOwnProperty(actions[i])) {
-	    preString[actions[i]].push(JSON.stringify(models[i], null, 0));
+	    //preString[actions[i]].push(JSON.stringify(models[i], null, 0));
+	    preString[actions[i]].push(models[i]);
 	}
 	else {
 	    preString[actions[i]] = []
-	    preString[actions[i]].push(JSON.stringify(models[i], null, 0));
+	    //preString[actions[i]].push(JSON.stringify(models[i], null, 0));
+	    preString[actions[i]].push(models[i]);
 	}
     }
     var finalMessages = [];
     
     // models and actions stringfied
-    var string = JSON.stringify(preString);
+    var string = JSON.stringify(preString, null, 0);
     var hash = CryptoJS.MD5(string);
     var hashString = hash.toString(CryptoJS.enc.Hex);
     // cutting up message
@@ -100,6 +105,6 @@ function prepareSms(models, actions) {
 	    finalMessages.push(fullMessage);
 	}
     }
-
+    console.log(finalMessages);
     return finalMessages;
 }
