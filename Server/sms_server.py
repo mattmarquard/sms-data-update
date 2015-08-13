@@ -33,8 +33,14 @@ class TwilioHandler(BaseHTTPRequestHandler):
 		"""Entry point for the class. Overridden GET handler that should 
 		be called when twilio req are recv'd.
 		"""
-		query_string_dict = urlparse.parse_qs(urlparse.urlparse(self.path).query, keep_blank_values=True)
-		all_seqs_recvd, had_successful_data_write = self._handle_seq(query_string_dict['Body'][0], query_string_dict['From'][0])
+		query_string_dict = urlparse.parse_qs(urlparse.urlparse(
+			self.path).query, 
+			keep_blank_values=True
+		)
+		all_seqs_recvd, had_successful_data_write = self._handle_seq(
+			query_string_dict['Body'][0], 
+			query_string_dict['From'][0]
+		)
 
 		if all_seqs_recvd and had_successful_data_write:
 			self._send_twilio_resp(True)
@@ -94,8 +100,6 @@ class TwilioHandler(BaseHTTPRequestHandler):
 			param = msg_body[msg_index: (msg_index + param_size)]
 			msg_index += param_size
 			return param, msg_index
-		else:
-			return
 
 	def _parse_hash_and_save(self, msg_id, msg_body):
 		msg_index = self.SEQ_SIZE * 2
@@ -103,8 +107,7 @@ class TwilioHandler(BaseHTTPRequestHandler):
 		if msg_id in self.ongoing_messages:
 			self.ongoing_messages[msg_id]['hash'] = hash_value
 		else:
-			self.ongoing_messages[msg_id] = {}
-			self.ongoing_messages[msg_id]['hash'] = hash_value
+			self.ongoing_messages[msg_id] = dict(hash = hash_value)
 
 	def _parse_header_and_seq(self, msg_body, had_hash_in_seq):
 		msg_index = 0
@@ -164,7 +167,7 @@ class TwilioHandler(BaseHTTPRequestHandler):
 	def _save_msg(self, msg_id, seq_total):
 		msg = ""
 		sequences = self.ongoing_messages[msg_id]['seqs']
-		for idx in range(0, int(seq_total)):
+		for idx in xrange(0, int(seq_total)):
 			index_string = str(idx)
 			if len(index_string) == 1:
 				index_string = "0" + index_string
@@ -186,21 +189,24 @@ class TwilioHandler(BaseHTTPRequestHandler):
 			if 'seqs' in self.ongoing_messages[msg_id]:
 				self.ongoing_messages[msg_id]['seqs'][seq_num] = seq
 			else:
-				self.ongoing_messages[msg_id]['seqs'] = {}
-				self.ongoing_messages[msg_id]['seqs'][seq_num] = seq
+				self.ongoing_messages[msg_id]['seqs'] = dict(seq_num=seq)
 		else:
-			self.ongoing_messages[msg_id] = {} 
-			self.ongoing_messages[msg_id]['seqs'] = {}
-			self.ongoing_messages[msg_id]['seqs'][seq_num] = seq
+			self.ongoing_messages[msg_id] = dict(seqs=dict(seq_num=seq))
 
 if __name__ == '__main__':
 	if sys.argv[1:]:
-		port = int(sys.argv[1])
+		try: 
+			port = int(sys.argv[1])
+			if port < 0 or port > 65535:
+				print "Invalid port selection"
+				sys.exit()
+		except ValueError:
+			port = 8000
 	else:
 		port = 8000
 
 	server= ThreadingServer(('', port), TwilioHandler)
-	print "Server Started"
+	print "Server Started on port {}".format(port)
 	try:
 		server.serve_forever()
 	except KeyboardInterrupt:

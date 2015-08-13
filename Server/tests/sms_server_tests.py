@@ -54,6 +54,15 @@ class TestServerMethods(unittest.TestCase):
 		handler.ongoing_messages[msg_id].pop('hash')
 		self.assertFalse(handler._check_msg_integrity(msg_id, seq_one[(handler.SEQ_SIZE *2):] + seq_two[(handler.SEQ_SIZE *2):] + seq_three[((handler.SEQ_SIZE *2) + handler.HASH_SIZE):]))
 
+	def test_parse_header_param(self):
+		msg_id = ' 6046046046'
+		handler = TwilioHandler(MockRequest(), ('', 8000), HTTPServer(('0.0.0.0', 8888), TwilioHandler))
+		param, msg_idx = handler._parse_header_param(seq_one, 0, 2)
+		self.assertEquals(param, '00')
+		param, msg_idx = handler._parse_header_param(seq_one, msg_idx, 2)
+		self.assertEquals(param, '03')
+		self.assertFalse(handler._parse_header_param("", msg_idx, 2))
+
 	def test_parse_header_and_seq(self):
 		msg_id = ' 6046046046'
 		handler = TwilioHandler(MockRequest(), ('', 8000), HTTPServer(('0.0.0.0', 8888), TwilioHandler))
