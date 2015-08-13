@@ -189,9 +189,12 @@ class TwilioHandler(BaseHTTPRequestHandler):
 			if 'seqs' in self.ongoing_messages[msg_id]:
 				self.ongoing_messages[msg_id]['seqs'][seq_num] = seq
 			else:
-				self.ongoing_messages[msg_id]['seqs'] = dict(seq_num=seq)
+				self.ongoing_messages[msg_id]['seqs'] = {}
+				self.ongoing_messages[msg_id]['seqs'][seq_num] = seq
 		else:
-			self.ongoing_messages[msg_id] = dict(seqs=dict(seq_num=seq))
+			self.ongoing_messages[msg_id] = {} 
+			self.ongoing_messages[msg_id]['seqs'] = {}
+			self.ongoing_messages[msg_id]['seqs'][seq_num] = seq
 
 if __name__ == '__main__':
 	if sys.argv[1:]:
