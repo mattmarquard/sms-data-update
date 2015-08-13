@@ -5,40 +5,65 @@
  */
 
 /**
- * Partitions 'data update' command into SMS compatible sizes
- * (< 144 characters).
+ * Partitions 'data update' command into SMS compatible sizes for protocol
+ * (145 characters).
  * @param {string} command - command to be executed on remote server
  * @returns {string[]} bodies - command partitioned into strings to be
  * 				sent via sms
  */
 function partitionMessage(command) {
+    var lastMsgLength = 113;
+    var regMsgLength = 144;
     console.log('prepartition');
     console.log(command.length);
     console.log(command);
     var cmdLength = command.length;
     var cmdComponents = [];
     // if size fits into one sms
-    if (cmdLength <= 80) {
+    if (cmdLength <= lastMsgLength) {
 	cmdComponents.push(command);
     } 
     // message has to be split amongst multiple SMS
     else {
-	lastComponent = command.slice(-113); // message in header with hash
-	var newLength = cmdLength - 113;
-	var endIndex = -113; //first char in regular header/message
-	var beginIndex = -114 - 144;
+	lastComponent = command.slice(-lastMsgLength); // message in header with hash
+	var newLength = cmdLength - lastMsgLength; 
+	var endIndex =  -lastMsgLength; //first char in regular header/message
+	var beginIndex = -114 - regMsgLength; //114 is first index after last component.
 	var cmdComponent;
 	while (newLength > 0) {
 	    cmdComponent = command.slice(beginIndex, endIndex);
 	    cmdComponents.unshift(cmdComponent);
-	    newLength = newLength - 144;
+	    newLength = newLength - regMsgLength;
 	    endIndex = beginIndex;
-	    beginIndex = endIndex - 144;
+	    beginIndex = endIndex - regMsgLength;
 	}
 	cmdComponents.push(lastComponent);
     }
     return cmdComponents;
 }
+
+
+/**
+ * Create JSON object of models and associated actions.
+ *
+ * @param {object[]} models - array of models to be updated on server
+ * @param {Number[]} actions - array of actions to take on models.
+ * @returns {object} JSON object of models and actions to take on them.
+ */
+function matchModelsToActions(models, actions) {
+
+    var preString = {}
+    for (i = 0; i < actions.length; i++) {
+	if (preString.hasOwnProperty(actions[i])) {
+	    preString[actions[i]].push(models[i]);
+	}
+	else {
+	    preString[actions[i]] = []
+	    preString[actions[i]].push(models[i]);
+	}
+    }
+    return preString;
+
 
 /**
  * Create's an array of SMS messages that encode the data update
@@ -50,31 +75,16 @@ function partitionMessage(command) {
  */
 function prepareSms(models, actions) {
 
-    var preString = {};
-    // stringify each object/model
-    for (i = 0; i < actions.length; i++) {
-	if (preString.hasOwnProperty(actions[i])) {
-	    //preString[actions[i]].push(JSON.stringify(models[i], null, 0));
-	    preString[actions[i]].push(models[i]);
-	}
-	else {
-	    preString[actions[i]] = []
-	    //preString[actions[i]].push(JSON.stringify(models[i], null, 0));
-	    preString[actions[i]].push(models[i]);
-	}
-    }
-    var finalMessages = [];
-    
-    // models and actions stringfied
+    var preString = matchModelsToActions(models, actions);
     var string = JSON.stringify(preString, null, 0);
     var hash = CryptoJS.MD5(string);
     var hashString = hash.toString(CryptoJS.enc.Hex);
     // cutting up message
     var cmdComponents = partitionMessage(string);
+    var finalMessages = [];
     var numMessages = cmdComponents.length;
     var seq;
     var seqString;
-    var tseq;
     var seqAndHash;
     var fullMessage;
     // if only one message setup finalheader with hash and return
@@ -86,13 +96,13 @@ function prepareSms(models, actions) {
 	return finalMessages;
     }
     //string of tseq
-    var tseqString = ("00" + numMessages).substr(-2,2);
+    var tSeqString = ("00" + numMessages).substr(-2,2);
 
     for (i = 0; i < numMessages; i ++) {
 	if (i == (numMessages - 1)) {
 	    seq = i;
 	    seqString = ("00" + seq).substr(-2,2);
-	    seqAndTotal = seqString.concat(tseqString);
+	    seqAndTotal = seqString.concat(tSeqString);
 	    seqAndHash = seqAndTotal.concat(hashString);
 	    fullMessage = seqAndHash.concat(cmdComponents[i]);
 	    finalMessages.push(fullMessage);
@@ -100,7 +110,7 @@ function prepareSms(models, actions) {
 	else {
 	    seq = i;
 	    seqString = ("00" + seq).substr(-2,2);
-	    seqAndTotal = seqString.concat(tseqString);
+	    seqAndTotal = seqString.concat(tSeqString);
 	    fullMessage = seqAndTotal.concat(cmdComponents[i]);
 	    finalMessages.push(fullMessage);
 	}
