@@ -8,13 +8,56 @@
 <body>
   <div id="qunit"></div>
   <div id="qunit-fixture"></div>
-  <script src="node_modules/qunitjs/qunit/qunit.js"></script>
-  <script src="../Client/smscomm.js"></script>
+  <script type="text/javascript" src="node_modules/jquery/dist/jquery.js"></script>
+  <script type="text/javascript" src="node_modules/underscore/underscore.js"></script>
+  <script type="text/javascript" src="node_modules/backbone/backbone.js"></script>
+  <script type="text/javascript" src="node_modules/md5.js"></script>
+  <script type="text/javascript" src="node_modules/qunitjs/qunit/qunit.js"></script>
+  <script type="text/javascript" src="../Client/smscomm.js"></script>
+  <script type="text/javascript" src="test_models.js"></script>
   <script>
+    /**
+     *  Test Data
+     */
+    var testHospital = new Hospital(
+	    {
+		name: "Matt Hospital",
+		population: 100,
+		address: '1234 Crisis Road'
+	    }
+    )
+    var testHospital2 = new Hospital(
+	    {
+		name: "Drew Hospital",
+		population: 100,
+		address: '1234 Apocolypse Avenue'
+	    }
+    )
+    var testShelter = new Shelter(
+	    {
+		name: "Scott Shack",
+		population: 90,
+		address: '1234 Archery Street'
+	    }
+    )
+    var input_models = [testHospital, testHospital2, testShelter];
+    var input_actions = [1, 2, 1];
+    /**
+      *  Tests.
+      */
     QUnit.test("smscomm.partitionMessage", function (assert) {
-      assert.ok(1 == "1", "Passed!");
+      var input = '{"1":[{"name":"Matt Hospital","population":100,"address":"1234 Crisis Road","_id":1}],"2":[{"name":"Drew Hospital","population":100,"address":"1234 Apocoly    pse Avenue","_id":1}],"3":[{"name":"Scott Shack","population":90,"address":"1234 Archery Street","_id":1}]}'
+      var output = partitionMessage(input);
+      assert.equal(output.length, 3, "Correct number of partitions created.");
     });
-    QUnit.test( "hello test", function( assert ) {
+    QUnit.test("smscomm.matchModelsToActions", function (assert) {
+      var correct = "Correctly matches models to actions."
+      var output = matchModelsToActions(input_models, input_actions);
+      assert.equal(output[1].length, 2, correct);
+      assert.equal(output[2].length, 1, correct);
+      assert.propEqual(testHospital2, output[2][0], correct);
+    });
+    QUnit.test( "smscomm.prepareSMS", function( assert ) {
       assert.ok( 1 == "1", "Passed!" );
     });
   </script>

@@ -1,3 +1,4 @@
+
 /**
  * SMS Communication Protocol for Data Updates
  * @author Matthew MacLennan matt@thevertigo.com
@@ -63,6 +64,7 @@ function matchModelsToActions(models, actions) {
 	}
     }
     return preString;
+}
 
 
 /**
